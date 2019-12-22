@@ -63,6 +63,8 @@ sub parse_imdb_title_page {
     $res->{summary} = _strip_summary($1)
         if $ct =~ m!<div class="summary_text"[^>]*>\s*(.+?)\s*</div>!s;
 
+    $res->{duration} = $1 if $imdb =~ m!<time itemprop="duration" datetime="PT(\d+)M!;
+
     [200, "OK", $res];
 }
 
