@@ -48,6 +48,7 @@ sub parse_imdb_title_page {
     my $resmeta = {};
     my $ld;
 
+    # 0 linked-data
   LINKED_DATA:
     {
         last unless
@@ -61,22 +62,23 @@ sub parse_imdb_title_page {
         $resmeta->{'func.ld'} = $ld;
     }
 
+    # countries
+    {
+        my $countries = {};
+        while ($ct =~ m!<a href="/search/title\?country_of_origin=(\w+)!g) {
+            $countries->{$1}++;
+        }
+        $res->{countries} = [sort keys %$countries];
+    }
+
+    # duration
     if ($ld && defined $ld->{duration}) {
         $res->{duration} = $ld->{duration};
     } elsif ($ct =~ m!<time itemprop="duration" datetime="(PT.+?)"!) {
         $res->{duration} = $1
     }
 
-    if ($ct =~ m!<span itemprop="ratingValue">(.+?)</span>!) {
-        $res->{rating} = $1;
-    }
-
-    if ($ct =~ m!<span id="titleYear">\(<a href="/year/(\d{4})/!) {
-        $res->{year} = $1;
-    } elsif ($ct =~ m!<title>[^<]+ (\d+)(?:/\w+)?\)!) {
-        $res->{year} = $1;
-    }
-
+    # genres
     if ($ld && $ld->{genre}) {
         $res->{genres} = [ map {lc} @{ $ld->{genre} } ];
     } else {
@@ -87,10 +89,44 @@ sub parse_imdb_title_page {
         $res->{genres} = [sort keys %$genres];
     }
 
+    # keywords
+    if ($ld && $ld->{keywords}) {
+        $res->{keywords} = [split /\s*,\s*/, $ld->{keywords}];
+    }
+
+    # languages
+    {
+        my $langs = {};
+        while ($ct =~ m!<a href="/search/title\?title_type=feature&primary_language=(\w+)!g) {
+            $langs->{$1}++;
+        }
+        $res->{languages} = [sort keys %$langs];
+    }
+
+    # rating
+    if ($ct =~ m!<span itemprop="ratingValue">(.+?)</span>!) {
+        $res->{rating} = $1;
+    }
+
+    # summary
     if ($ld && $ld->{description}) {
         $res->{summary} = $ld->{description};
     } elsif ($ct =~ m!<div class="summary_text"[^>]*>\s*(.+?)\s*</div>!s) {
         $res->{summary} = _strip_summary($1)
+    }
+
+    # year
+    if ($ct =~ m!<span id="titleYear">\(<a href="/year/(\d{4})/!) {
+        $res->{year} = $1;
+    } elsif ($ct =~ m!<title>[^<]+ (\d+)(?:/\w+)?\)!) {
+        $res->{year} = $1;
+    }
+
+    # title
+    if ($ld && defined $ld->{name}) {
+        $res->{title} = $ld->{name};
+    } elsif ($ct =~ m!<div class="title_wrapper">\s*<h1 class="">(.+)?&nbsp;<!s) {
+        $res->{title} = $1;
     }
 
     [200, "OK", $res, $resmeta];
