@@ -1,3 +1,8 @@
+0.004   2020-02-17  Released-By: PERLANCAR; Urgency: medium
+
+	- Get genres & description from linked-data if available.
+
+
 0.003   2019-12-28  Released-By: PERLANCAR; Urgency: medium
 
 	- Extract the ISO date instead of just the minutes.
