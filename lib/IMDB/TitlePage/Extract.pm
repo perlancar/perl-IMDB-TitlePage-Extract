@@ -46,42 +46,52 @@ sub parse_imdb_title_page {
 
     my $res = {};
     my $resmeta = {};
+    my $ld;
 
   LINKED_DATA:
     {
         last unless
             $ct =~ m!\Q<script type="application/ld+json">\E(.+?)</script>!s;
         require JSON::MaybeXS;
-        my $ld;
         eval { $ld = JSON::MaybeXS::decode_json($1) };
         if ($@) {
             log_error("Cannot parse linked data as JSON: $@");
             last;
         }
         $resmeta->{'func.ld'} = $ld;
-        $res->{duration} //= $ld->{duration};
     }
 
-    $res->{rating} //= $1
-        if $ct =~ m!<span itemprop="ratingValue">(.+?)</span>!;
+    if ($ld && defined $ld->{duration}) {
+        $res->{duration} = $ld->{duration};
+    } elsif ($ct =~ m!<time itemprop="duration" datetime="(PT.+?)"!) {
+        $res->{duration} = $1
+    }
+
+    if ($ct =~ m!<span itemprop="ratingValue">(.+?)</span>!) {
+        $res->{rating} = $1;
+    }
 
     if ($ct =~ m!<span id="titleYear">\(<a href="/year/(\d{4})/!) {
-        $res->{year} //= $1;
+        $res->{year} = $1;
     } elsif ($ct =~ m!<title>[^<]+ (\d+)(?:/\w+)?\)!) {
-        $res->{year} //= $1;
+        $res->{year} = $1;
     }
 
-    my $genres = {};
-    while ($ct =~ m!<a href="/genre/([^/?]+)!g) {
-        $genres->{lc($1)}++;
+    if ($ld && $ld->{genre}) {
+        $res->{genres} = [ map {lc} @{ $ld->{genre} } ];
+    } else {
+        my $genres = {};
+        while ($ct =~ m!<a href="/genre/([^/?]+)!g) {
+            $genres->{lc($1)}++;
+        }
+        $res->{genres} = [sort keys %$genres];
     }
-    $res->{genres} //= [sort keys %$genres];
 
-    $res->{summary} //= _strip_summary($1)
-        if $ct =~ m!<div class="summary_text"[^>]*>\s*(.+?)\s*</div>!s;
-
-    $res->{duration} //= $1
-        if $ct =~ m!<time itemprop="duration" datetime="(PT.+?)"!;
+    if ($ld && $ld->{description}) {
+        $res->{summary} = $ld->{description};
+    } elsif ($ct =~ m!<div class="summary_text"[^>]*>\s*(.+?)\s*</div>!s) {
+        $res->{summary} = _strip_summary($1)
+    }
 
     [200, "OK", $res, $resmeta];
 }
