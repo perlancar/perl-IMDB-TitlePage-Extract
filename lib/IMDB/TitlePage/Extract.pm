@@ -68,6 +68,9 @@ sub parse_imdb_title_page {
         while ($ct =~ m!<a href="/search/title\?country_of_origin=(\w+)!g) {
             $countries->{$1}++;
         }
+        while ($ct =~ m!<a href="/country/(\w+)\?!g) {
+            $countries->{$1}++;
+        }
         $res->{countries} = [sort keys %$countries];
     }
 
@@ -80,7 +83,7 @@ sub parse_imdb_title_page {
 
     # genres
     if ($ld && $ld->{genre}) {
-        $res->{genres} = [ map {lc} @{ $ld->{genre} } ];
+        $res->{genres} = [ map {lc} @{ ref $ld->{genre} eq 'ARRAY' ? $ld->{genre} : [$ld->{genre}] } ];
     } else {
         my $genres = {};
         while ($ct =~ m!<a href="/genre/([^/?]+)!g) {
@@ -98,6 +101,9 @@ sub parse_imdb_title_page {
     {
         my $langs = {};
         while ($ct =~ m!<a href="/search/title\?title_type=feature&primary_language=(\w+)!g) {
+            $langs->{$1}++;
+        }
+        while ($ct =~ m!<a href="/language/(\w+)\?!g) {
             $langs->{$1}++;
         }
         $res->{languages} = [sort keys %$langs];
