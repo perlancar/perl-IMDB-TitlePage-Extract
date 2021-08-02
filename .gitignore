@@ -2,3 +2,4 @@ IMDB-TitlePage-Extract-*
 .build
 *~
 nytprof*
+.DS_Store
